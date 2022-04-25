@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
+import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
+import 'package:fluttermaptutorial/FakeData.dart';
 import 'package:latlong2/latlong.dart' as LatLng;
 
 void main() {
@@ -51,18 +54,17 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  //set markers function
+  List<Marker> setMarkers() {
+    return List<Marker>.from(FakeData.getLocations.map((e) => new Marker(
+        width: 60,
+        height: 60,
+        point: new LatLng.LatLng(e.latitude, e.longitude),
+        builder: (context) => new Icon(Icons.pin_drop))));
   }
+
+//mapcontroller field to focus map
+  final MapController _mapController = MapController();
 
   @override
   Widget build(BuildContext context) {
@@ -76,43 +78,82 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         // Here we take the value from the MyHomePage object that was created by
         // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: Text('Flutter Map Tutorial - Kabalidev'),
       ),
-      body: FlutterMap(
-        options: MapOptions(
-          center: LatLng.LatLng(51.5, -0.09),
-          zoom: 13.0,
-        ),
-        layers: [
-          TileLayerOptions(
-            urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-            subdomains: ['a', 'b', 'c'],
-            attributionBuilder: (_) {
-              return Text("© OpenStreetMap contributors");
-            },
-          ),
-          MarkerLayerOptions(
-            markers: [
-              Marker(
-                width: 80.0,
-                height: 80.0,
-                point: LatLng.LatLng(51.5, -0.09),
-                builder: (ctx) => Container(
-                  child: Icon(
-                    Icons.location_city,
-                    size: 50,
-                  ),
+      body: SafeArea(
+          child: Container(
+        child: Stack(children: [
+          Positioned(
+            child: FlutterMap(
+              //we have to add mapcontroller to flutter map
+              mapController: _mapController,
+              options: MapOptions(
+                  center: LatLng.LatLng(FakeData.getLocations[0].latitude,
+                      FakeData.getLocations[0].longitude),
+                  zoom: 13.0,
+                  plugins: [LocationMarkerPlugin(), MarkerClusterPlugin()]),
+              layers: [
+                TileLayerOptions(
+                  urlTemplate:
+                      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                  subdomains: ['a', 'b', 'c'],
                 ),
-              ),
-            ],
+                MarkerLayerOptions(
+                  markers: setMarkers(),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+          Positioned(
+            bottom: 20,
+            right: 0,
+            left: 0,
+            child: Container(
+              height: 150,
+              child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: FakeData.getLocations.length,
+                  itemBuilder: (BuildContext context, int index) =>
+                      GestureDetector(
+                        //When i click cardi i should focus city lang long
+
+                        onTap: () {
+                          //focus event
+                          // we can focus new city with mapcontroller move method
+                          var response = _mapController.move(
+                              LatLng.LatLng(
+                                  FakeData.getLocations[index].latitude,
+                                  FakeData.getLocations[index].longitude),
+                              13);
+                        },
+                        child: Container(
+                          margin: EdgeInsets.only(left: 10, right: 10),
+                          width: MediaQuery.of(context).size.width / 1.7,
+                          decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(15)),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              children: [
+                                Text(
+                                  FakeData.getLocations[index].name,
+                                  style: TextStyle(fontSize: 25),
+                                ),
+                                SizedBox(
+                                  height: 20,
+                                ),
+                                Text(FakeData.getLocations[index].description)
+                              ],
+                            ),
+                          ),
+                        ),
+                      )),
+            ),
+          )
+        ]),
+      )),
+      // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
