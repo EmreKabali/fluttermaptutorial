@@ -4,9 +4,15 @@ import 'package:flutter_map_location_marker/flutter_map_location_marker.dart';
 import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:fluttermaptutorial/FakeData.dart';
 import 'package:latlong2/latlong.dart' as LatLng;
+//we  are able to use user location with this package
+import 'package:geolocator/geolocator.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  //It should ask me , when i open app
+  LocationPermission permission = await Geolocator.requestPermission();
+
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -30,14 +36,12 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title}) : super(key: key);
-
   // This widget is the home page of your application. It is stateful, meaning
   // that it has a State object (defined below) that contains fields that affect
   // how it looks.
@@ -47,7 +51,8 @@ class MyHomePage extends StatefulWidget {
   // used by the build method of the State. Fields in a Widget subclass are
   // always marked "final".
 
-  final String title;
+  late Position position;
+  bool isLoad = false;
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();
@@ -65,6 +70,21 @@ class _MyHomePageState extends State<MyHomePage> {
 
 //mapcontroller field to focus map
   final MapController _mapController = MapController();
+
+  Future<void> getCurrentPosition() async {
+    widget.position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+    setState(() {
+      widget.isLoad = true;
+    });
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    getCurrentPosition();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,25 +104,40 @@ class _MyHomePageState extends State<MyHomePage> {
           child: Container(
         child: Stack(children: [
           Positioned(
-            child: FlutterMap(
-              //we have to add mapcontroller to flutter map
-              mapController: _mapController,
-              options: MapOptions(
-                  center: LatLng.LatLng(FakeData.getLocations[0].latitude,
-                      FakeData.getLocations[0].longitude),
-                  zoom: 13.0,
-                  plugins: [LocationMarkerPlugin(), MarkerClusterPlugin()]),
-              layers: [
-                TileLayerOptions(
-                  urlTemplate:
-                      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  subdomains: ['a', 'b', 'c'],
-                ),
-                MarkerLayerOptions(
-                  markers: setMarkers(),
-                ),
-              ],
-            ),
+            child: widget.isLoad
+                ? FlutterMap(
+                    //we have to add mapcontroller to flutter map
+                    mapController: _mapController,
+                    options: MapOptions(
+                        center: LatLng.LatLng(widget.position.latitude,
+                            widget.position.longitude),
+                        zoom: 13.0,
+                        plugins: [
+                          LocationMarkerPlugin(),
+                          MarkerClusterPlugin()
+                        ]),
+                    layers: [
+                      TileLayerOptions(
+                        urlTemplate:
+                            "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        subdomains: ['a', 'b', 'c'],
+                      ),
+                      MarkerLayerOptions(markers: [
+                        Marker(
+                            width: 100,
+                            height: 100,
+                            point: new LatLng.LatLng(widget.position.latitude,
+                                widget.position.longitude),
+                            builder: (context) => new Icon(
+                                  Icons.pin_drop,
+                                  color: Colors.red,
+                                ))
+                      ]
+                          // setMarkers(),
+                          ),
+                    ],
+                  )
+                : Center(child: CircularProgressIndicator()),
           ),
           Positioned(
             bottom: 20,
